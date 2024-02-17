@@ -20,15 +20,14 @@ import (
 )
 
 var (
-	bucket, domain, entryPath, dir, region string
-	overwrite                              bool
+	bucket, entryPath, dir, region string
+	overwrite                      bool
 )
 
 func init() {
 	flag.StringVar(&bucket, "s3Bucket", "", "Upload S3 bucket name")
 	flag.StringVar(&dir, "s3Dir", "", "Upload S3 directory key")
 	flag.StringVar(&region, "s3Region", "ap-northeast-1", "Upload S3 region name")
-	flag.StringVar(&domain, "s3Domain", "", "S3 domain")
 	flag.BoolVar(&overwrite, "overwrite", false, "Overwrite when the photo has been already uploaded")
 }
 
@@ -37,9 +36,6 @@ func main() {
 	if bucket == "" || region == "" {
 		log.Fatal("required args must be not empty")
 	}
-	if domain == "" {
-		domain = bucket
-	}
 
 	sdkConfig, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
@@ -47,7 +43,7 @@ func main() {
 	}
 	s3Client := s3.NewFromConfig(sdkConfig)
 
-	// r_a_url := regexp.MustCompile(`https?://www\.flickr\.com/gp/\w+/\w+`)
+	rFlickrATag := regexp.MustCompile(`<a (?:data-flickr-embed="true")?.*href="https?://www\.flickr\.com/gp/\w+/\w+"[^>]*>`)
 	// TODO: more extension
 	rFlickrUrl := regexp.MustCompile(`https?://\w+\.staticflickr\.com/\w+/\w+\.jpg`)
 
@@ -65,7 +61,6 @@ func main() {
 	entryb, err := io.ReadAll(f)
 	entry := string(entryb)
 
-	// a_url := r_a_url.FindStringSubmatch(article)
 	flickrUrls := rFlickrUrl.FindAllString(entry, -1)
 	if flickrUrls == nil {
 		log.Fatal("Url is not found")
@@ -108,12 +103,12 @@ func main() {
 		}
 
 		// replace old flickr url to new s3 one
-		newUrl := "https://" + domain + "/" + key
+		newUrl := "https://" + bucket + "/" + key
 		replaceUrlPairs[i*2] = url
 		replaceUrlPairs[i*2+1] = newUrl
 
 		// remove unused flickr attributes
 	}
 	replacer := strings.NewReplacer(replaceUrlPairs...)
-	fmt.Print(replacer.Replace(entry))
+	fmt.Print(replacer.Replace(rFlickrATag.ReplaceAllString(entry, `<a tabindex="-1">`)))
 }
