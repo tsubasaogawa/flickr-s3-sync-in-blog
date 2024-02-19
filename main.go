@@ -21,7 +21,7 @@ import (
 
 var (
 	bucket, entryPath, dir, region string
-	overwrite                      bool
+	overwrite, uploadS3            bool
 )
 
 func init() {
@@ -29,6 +29,7 @@ func init() {
 	flag.StringVar(&dir, "s3Dir", "", "Upload S3 directory key")
 	flag.StringVar(&region, "s3Region", "ap-northeast-1", "Upload S3 region name")
 	flag.BoolVar(&overwrite, "overwrite", false, "Overwrite when the photo has been already uploaded")
+	flag.BoolVar(&uploadS3, "uploadS3", true, "Skip uploading to S3 when false")
 }
 
 func main() {
@@ -43,9 +44,9 @@ func main() {
 	}
 	s3Client := s3.NewFromConfig(sdkConfig)
 
-	rFlickrATag := regexp.MustCompile(`<a (?:data-flickr-embed="true")?.*href="https?://www\.flickr\.com/gp/\w+/\w+"[^>]*>`)
-	// TODO: more extension
-	rFlickrUrl := regexp.MustCompile(`https?://\w+\.staticflickr\.com/\w+/\w+\.jpg`)
+	rFlickrATag := regexp.MustCompile(`<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+/in/[^"]+|gp/\w+/\w+)"[^>]*>`)
+	rFlickrScriptTag := regexp.MustCompile(`<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>`)
+	rFlickrUrl := regexp.MustCompile(`https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)`)
 
 	entryPath = flag.Arg(0)
 	if entryPath == "" {
@@ -63,7 +64,8 @@ func main() {
 
 	flickrUrls := rFlickrUrl.FindAllString(entry, -1)
 	if flickrUrls == nil {
-		log.Fatal("Url is not found")
+		log.Println("Flickr url is not found")
+		os.Exit(0)
 	}
 	replaceUrlPairs := make([]string, len(flickrUrls)*2)
 	for i, url := range flickrUrls {
@@ -90,7 +92,7 @@ func main() {
 		})
 		if err != nil {
 			log.Fatal(err)
-		} else if overwrite || *result.KeyCount < 1 {
+		} else if uploadS3 && (overwrite || *result.KeyCount < 1) {
 			_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
 				Bucket:        aws.String(bucket),
 				Key:           aws.String(key),
@@ -106,9 +108,12 @@ func main() {
 		newUrl := "https://" + bucket + "/" + key
 		replaceUrlPairs[i*2] = url
 		replaceUrlPairs[i*2+1] = newUrl
-
-		// remove unused flickr attributes
 	}
 	replacer := strings.NewReplacer(replaceUrlPairs...)
-	fmt.Print(replacer.Replace(rFlickrATag.ReplaceAllString(entry, `<a tabindex="-1">`)))
+	fmt.Print(replacer.Replace(
+		rFlickrScriptTag.ReplaceAllString(
+			rFlickrATag.ReplaceAllString(entry, `<a tabindex="-1">`),
+			"",
+		),
+	))
 }
