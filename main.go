@@ -23,6 +23,45 @@ type Url struct {
 	old string
 	new string
 }
+type Urls []Url
+
+type Entry struct {
+	body string
+}
+
+func (urls *Urls) flatten() []string {
+	fl := make([]string, len(*urls)*2)
+	for _, url := range *urls {
+		fl = append(fl, url.old, url.new)
+	}
+	return fl
+}
+
+func NewEntry(file string) (Entry, error) {
+	entryTextb, err := os.ReadFile(entryPath)
+	if err != nil {
+		return Entry{}, err
+	}
+
+	return Entry{
+		body: string(entryTextb),
+	}, nil
+}
+
+var (
+	rFlickrImageUrl  = regexp.MustCompile(`https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)`)
+	rFlickrATag      = regexp.MustCompile(`<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+/in/[^"]+|gp/\w+/\w+)"[^>]*>`)
+	rFlickrScriptTag = regexp.MustCompile(`<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>`)
+)
+
+func (entry *Entry) replace(replaceUrlPairs Urls) {
+	entry.body = strings.NewReplacer(replaceUrlPairs.flatten()...).Replace(
+		rFlickrScriptTag.ReplaceAllString(
+			rFlickrATag.ReplaceAllString(entry.body, `<a tabindex="-1">`),
+			"",
+		),
+	)
+}
 
 var (
 	bucket, entryPath, dir, region string
@@ -43,42 +82,42 @@ func main() {
 		log.Fatal("required args must be not empty")
 	}
 
+	if dir != "" && !strings.HasSuffix(dir, "/") {
+		dir += "/"
+	}
+
 	sdkConfig, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		log.Fatal("Couldn't load default configuration. Have you set up your AWS account?")
 	}
 	s3Client := s3.NewFromConfig(sdkConfig)
 
-	rFlickrImageUrl := regexp.MustCompile(`https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)`)
-
 	entryPath = flag.Arg(0)
 	if entryPath == "" {
 		log.Fatal("Arg is required")
 	}
 
-	entryTextb, err := os.ReadFile(entryPath)
+	// read entry text
+	entry, err := NewEntry(entryPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	entryText := string(entryTextb)
 
-	flickrImageUrls := rFlickrImageUrl.FindAllString(entryText, -1)
+	// pick up flickr image urls
+	flickrImageUrls := rFlickrImageUrl.FindAllString(entry.body, -1)
 	if flickrImageUrls == nil {
 		log.Println("Flickr url is not in an entry")
 		os.Exit(0)
 	}
 
-	replaceUrlPairs := make([]Url, len(flickrImageUrls))
+	replaceUrlPairs := make(Urls, len(flickrImageUrls))
 	for i, url := range flickrImageUrls {
 		// up to s3
-		imgb, err := getImageByteFromFlickr(url)
+		imgb, err := getImageByteData(url)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		if dir != "" && !strings.HasSuffix(dir, "/") {
-			dir += "/"
-		}
 		key := dir + filepath.Base(url)
 		if err = uploadToS3(s3Client, key, imgb); err != nil {
 			log.Fatal(err)
@@ -88,10 +127,11 @@ func main() {
 		replaceUrlPairs[i].old = url
 		replaceUrlPairs[i].new = "https://" + bucket + "/" + key
 	}
-	fmt.Print(replaceFlickrHtml(parseUrl(replaceUrlPairs), entryText))
+	entry.replace(replaceUrlPairs)
+	fmt.Print(entry.body)
 }
 
-func getImageByteFromFlickr(url string) ([]byte, error) {
+func getImageByteData(url string) ([]byte, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return []byte{}, err
@@ -130,25 +170,4 @@ func uploadToS3(s3c *s3.Client, key string, imgb []byte) error {
 	}, s3.WithAPIOptions(v4.SwapComputePayloadSHA256ForUnsignedPayloadMiddleware))
 
 	return err
-}
-
-func replaceFlickrHtml(replaceUrlPairs []string, text string) string {
-	rFlickrATag := regexp.MustCompile(`<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+/in/[^"]+|gp/\w+/\w+)"[^>]*>`)
-	rFlickrScriptTag := regexp.MustCompile(`<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>`)
-
-	replacer := strings.NewReplacer(replaceUrlPairs...)
-	return replacer.Replace(
-		rFlickrScriptTag.ReplaceAllString(
-			rFlickrATag.ReplaceAllString(text, `<a tabindex="-1">`),
-			"",
-		),
-	)
-}
-
-func parseUrl(urls []Url) []string {
-	parsed := make([]string, len(urls)*2)
-	for _, url := range urls {
-		parsed = append(parsed, url.old, url.new)
-	}
-	return parsed
 }
