@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -26,7 +25,7 @@ type Url struct {
 type Urls []Url
 
 type Entry struct {
-	body string
+	file, body string
 }
 
 func (urls *Urls) flatten() []string {
@@ -38,12 +37,13 @@ func (urls *Urls) flatten() []string {
 }
 
 func NewEntry(file string) (Entry, error) {
-	entryTextb, err := os.ReadFile(entryPath)
+	entryTextb, err := os.ReadFile(file)
 	if err != nil {
 		return Entry{}, err
 	}
 
 	return Entry{
+		file: file,
 		body: string(entryTextb),
 	}, nil
 }
@@ -63,9 +63,13 @@ func (entry *Entry) replace(replaceUrlPairs Urls) {
 	)
 }
 
+func (entry *Entry) save() error {
+	return os.WriteFile(entry.file, []byte(entry.body), 0644)
+}
+
 var (
-	bucket, entryPath, dir, region string
-	overwrite, uploadS3            bool
+	bucket, entryPath, dir, region, backupDir string
+	overwrite, uploadS3                       bool
 )
 
 func init() {
@@ -74,6 +78,7 @@ func init() {
 	flag.StringVar(&region, "s3Region", "ap-northeast-1", "Upload S3 region name")
 	flag.BoolVar(&overwrite, "overwrite", false, "Overwrite when the photo has been already uploaded")
 	flag.BoolVar(&uploadS3, "uploadS3", true, "Skip uploading to S3 when false")
+	flag.StringVar(&backupDir, "backupDir", "", "Backup directory for an entry file")
 }
 
 func main() {
@@ -119,6 +124,7 @@ func main() {
 		}
 
 		key := dir + filepath.Base(url)
+		// TODO: goroutine
 		if err = uploadToS3(s3Client, key, imgb); err != nil {
 			log.Fatal(err)
 		}
@@ -127,8 +133,11 @@ func main() {
 		replaceUrlPairs[i].old = url
 		replaceUrlPairs[i].new = "https://" + bucket + "/" + key
 	}
+	if backupDir != "" {
+		// TODO: implementation
+	}
 	entry.replace(replaceUrlPairs)
-	fmt.Print(entry.body)
+	entry.save()
 }
 
 func getImageByteData(url string) ([]byte, error) {
