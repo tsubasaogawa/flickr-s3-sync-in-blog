@@ -24,10 +24,6 @@ type Url struct {
 }
 type Urls []Url
 
-type Entry struct {
-	file, body string
-}
-
 func (urls *Urls) flatten() []string {
 	fl := make([]string, len(*urls)*2)
 	for _, url := range *urls {
@@ -36,23 +32,39 @@ func (urls *Urls) flatten() []string {
 	return fl
 }
 
-func NewEntry(file string) (Entry, error) {
-	entryTextb, err := os.ReadFile(file)
-	if err != nil {
-		return Entry{}, err
-	}
-
-	return Entry{
-		file: file,
-		body: string(entryTextb),
-	}, nil
-}
-
 var (
 	rFlickrImageUrl  = regexp.MustCompile(`https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)`)
 	rFlickrATag      = regexp.MustCompile(`<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+/in/[^"]+|gp/\w+/\w+)"[^>]*>`)
 	rFlickrScriptTag = regexp.MustCompile(`<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>`)
 )
+
+type Entry struct {
+	file, body string
+}
+
+func NewEntry(file, backupDir string) (Entry, error) {
+	textb, err := os.ReadFile(file)
+	if err != nil {
+		return Entry{}, err
+	}
+
+	if backupDir != "" {
+		if f, err := os.Stat(backupDir); os.IsNotExist(err) || !f.IsDir() {
+			if err = os.MkdirAll(backupDir, os.ModeDir); err != nil {
+				return Entry{}, err
+			}
+		}
+		backupFile := filepath.Join(backupDir, filepath.Base(file)) + ".bak"
+		if err = os.WriteFile(backupFile, textb, os.ModePerm); err != nil {
+			return Entry{}, err
+		}
+	}
+
+	return Entry{
+		file: file,
+		body: string(textb),
+	}, nil
+}
 
 func (entry *Entry) replace(replaceUrlPairs Urls) {
 	entry.body = strings.NewReplacer(replaceUrlPairs.flatten()...).Replace(
@@ -64,12 +76,12 @@ func (entry *Entry) replace(replaceUrlPairs Urls) {
 }
 
 func (entry *Entry) save() error {
-	return os.WriteFile(entry.file, []byte(entry.body), 0644)
+	return os.WriteFile(entry.file, []byte(entry.body), os.ModePerm)
 }
 
 var (
 	bucket, entryPath, dir, region, backupDir string
-	overwrite, uploadS3                       bool
+	overwrite, uploadS3, dryrun               bool
 )
 
 func init() {
@@ -87,10 +99,6 @@ func main() {
 		log.Fatal("required args must be not empty")
 	}
 
-	if dir != "" && !strings.HasSuffix(dir, "/") {
-		dir += "/"
-	}
-
 	sdkConfig, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		log.Fatal("Couldn't load default configuration. Have you set up your AWS account?")
@@ -103,7 +111,7 @@ func main() {
 	}
 
 	// read entry text
-	entry, err := NewEntry(entryPath)
+	entry, err := NewEntry(entryPath, backupDir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -123,19 +131,17 @@ func main() {
 			log.Fatal(err)
 		}
 
-		key := dir + filepath.Base(url)
 		// TODO: goroutine
 		if err = uploadToS3(s3Client, key, imgb); err != nil {
 			log.Fatal(err)
+		key := filepath.Join(dir, filepath.Base(url))
 		}
 
 		// replace old flickr url to new s3 one
 		replaceUrlPairs[i].old = url
 		replaceUrlPairs[i].new = "https://" + bucket + "/" + key
 	}
-	if backupDir != "" {
-		// TODO: implementation
-	}
+
 	entry.replace(replaceUrlPairs)
 	entry.save()
 }
