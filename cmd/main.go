@@ -11,74 +11,19 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
+
+	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/entry"
+	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/url"
 )
-
-type Url struct {
-	old string
-	new string
-}
-type Urls []Url
-
-func (urls *Urls) flatten() []string {
-	fl := make([]string, len(*urls)*2)
-	for _, url := range *urls {
-		fl = append(fl, url.old, url.new)
-	}
-	return fl
-}
 
 var (
-	rFlickrImageUrl  = regexp.MustCompile(`https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)`)
-	rFlickrATag      = regexp.MustCompile(`<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+/in/[^"]+|gp/\w+/\w+)"[^>]*>`)
-	rFlickrScriptTag = regexp.MustCompile(`<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>`)
+	rFlickrImageUrl = regexp.MustCompile(`https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)`)
 )
-
-type Entry struct {
-	file, body string
-}
-
-func NewEntry(file, backupDir string, dryrun bool) (Entry, error) {
-	textb, err := os.ReadFile(file)
-	if err != nil {
-		return Entry{}, err
-	}
-
-	if backupDir != "" && !dryrun {
-		if f, err := os.Stat(backupDir); os.IsNotExist(err) || !f.IsDir() {
-			if err = os.MkdirAll(backupDir, os.ModePerm); err != nil {
-				return Entry{}, err
-			}
-		}
-		backupFile := filepath.Join(backupDir, filepath.Base(file)) + ".bak"
-		if err = os.WriteFile(backupFile, textb, os.ModePerm); err != nil {
-			return Entry{}, err
-		}
-	}
-
-	return Entry{
-		file: file,
-		body: string(textb),
-	}, nil
-}
-
-func (entry *Entry) replace(replaceUrlPairs Urls) {
-	entry.body = strings.NewReplacer(replaceUrlPairs.flatten()...).Replace(
-		rFlickrScriptTag.ReplaceAllString(
-			rFlickrATag.ReplaceAllString(entry.body, `<a tabindex="-1">`),
-			"",
-		),
-	)
-}
-
-func (entry *Entry) save() error {
-	return os.WriteFile(entry.file, []byte(entry.body), os.ModePerm)
-}
 
 var (
 	bucket, entryPath, dir, region, backupDir string
@@ -113,19 +58,19 @@ func main() {
 	}
 
 	// read entry text
-	entry, err := NewEntry(entryPath, backupDir, dryrun)
+	entry, err := entry.NewEntry(entryPath, backupDir, dryrun)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// pick up flickr image urls
-	flickrImageUrls := rFlickrImageUrl.FindAllString(entry.body, -1)
+	flickrImageUrls := rFlickrImageUrl.FindAllString(entry.Body, -1)
 	if flickrImageUrls == nil {
 		log.Println("Flickr url is not in an entry")
 		os.Exit(0)
 	}
 
-	replaceUrlPairs := make(Urls, len(flickrImageUrls))
+	replaceUrlPairs := make(url.Urls, len(flickrImageUrls))
 	for i, url := range flickrImageUrls {
 		// up to s3
 		imgb, err := getImageByteData(url)
@@ -141,16 +86,16 @@ func main() {
 			}
 		}
 		// replace old flickr url to new s3 one
-		replaceUrlPairs[i].old = url
-		replaceUrlPairs[i].new = "https://" + bucket + "/" + key
+		replaceUrlPairs[i].Old = url
+		replaceUrlPairs[i].New = "https://" + bucket + "/" + key
 	}
 
-	entry.replace(replaceUrlPairs)
+	entry.Replace(replaceUrlPairs)
 	if dryrun {
-		fmt.Print(entry.body)
+		fmt.Print(entry.Body)
 		return
 	}
-	entry.save()
+	entry.Save()
 }
 
 func getImageByteData(url string) ([]byte, error) {
