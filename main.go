@@ -43,15 +43,15 @@ type Entry struct {
 	file, body string
 }
 
-func NewEntry(file, backupDir string) (Entry, error) {
+func NewEntry(file, backupDir string, dryrun bool) (Entry, error) {
 	textb, err := os.ReadFile(file)
 	if err != nil {
 		return Entry{}, err
 	}
 
-	if backupDir != "" {
+	if backupDir != "" && !dryrun {
 		if f, err := os.Stat(backupDir); os.IsNotExist(err) || !f.IsDir() {
-			if err = os.MkdirAll(backupDir, os.ModeDir); err != nil {
+			if err = os.MkdirAll(backupDir, os.ModePerm); err != nil {
 				return Entry{}, err
 			}
 		}
@@ -113,7 +113,7 @@ func main() {
 	}
 
 	// read entry text
-	entry, err := NewEntry(entryPath, backupDir)
+	entry, err := NewEntry(entryPath, backupDir, dryrun)
 	if err != nil {
 		log.Fatal(err)
 	}
