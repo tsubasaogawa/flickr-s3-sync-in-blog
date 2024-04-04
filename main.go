@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -90,6 +91,7 @@ func init() {
 	flag.StringVar(&region, "s3Region", "ap-northeast-1", "Upload S3 region name")
 	flag.BoolVar(&overwrite, "overwrite", false, "Overwrite when the photo has been already uploaded")
 	flag.BoolVar(&uploadS3, "uploadS3", true, "Skip uploading to S3 when false")
+	flag.BoolVar(&dryrun, "dryrun", false, "Dry run")
 	flag.StringVar(&backupDir, "backupDir", "", "Backup directory for an entry file")
 }
 
@@ -131,18 +133,23 @@ func main() {
 			log.Fatal(err)
 		}
 
-		// TODO: goroutine
-		if err = uploadToS3(s3Client, key, imgb); err != nil {
-			log.Fatal(err)
 		key := filepath.Join(dir, filepath.Base(url))
+		if !dryrun {
+			// TODO: goroutine
+			if err = uploadToS3(s3Client, key, imgb); err != nil {
+				log.Fatal(err)
+			}
 		}
-
 		// replace old flickr url to new s3 one
 		replaceUrlPairs[i].old = url
 		replaceUrlPairs[i].new = "https://" + bucket + "/" + key
 	}
 
 	entry.replace(replaceUrlPairs)
+	if dryrun {
+		fmt.Print(entry.body)
+		return
+	}
 	entry.save()
 }
 
