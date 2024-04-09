@@ -12,6 +12,7 @@ import (
 var (
 	rFlickrATag      = regexp.MustCompile(`<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+/in/[^"]+|gp/\w+/\w+)"[^>]*>`)
 	rFlickrScriptTag = regexp.MustCompile(`<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>`)
+	rEntryPathSuffix = regexp.MustCompile(`entry[/\\]\d{4}[/\\]\d{2}[/\\]\d{2}[/\\]\d{6}.md$`)
 )
 
 type Entry struct {
@@ -25,13 +26,7 @@ func NewEntry(file, backupDir string, dryrun bool) (Entry, error) {
 	}
 
 	if backupDir != "" && !dryrun {
-		if f, err := os.Stat(backupDir); os.IsNotExist(err) || !f.IsDir() {
-			if err = os.MkdirAll(backupDir, os.ModePerm); err != nil {
-				return Entry{}, err
-			}
-		}
-		backupFile := filepath.Join(backupDir, filepath.Base(file)) + ".bak"
-		if err = os.WriteFile(backupFile, textb, os.ModePerm); err != nil {
+		if err := backup(file, backupDir, textb); err != nil {
 			return Entry{}, err
 		}
 	}
@@ -53,4 +48,22 @@ func (entry *Entry) Replace(replaceUrlPairs url.Urls) {
 
 func (entry *Entry) Save() error {
 	return os.WriteFile(entry.File, []byte(entry.Body), os.ModePerm)
+}
+
+// TODO: pointer argument `data`
+func backup(fromFile, toDirBase string, data []byte) error {
+	entryPathSuffix := rEntryPathSuffix.FindString(fromFile)
+	if entryPathSuffix == "" {
+		entryPathSuffix = filepath.Base(fromFile)
+	}
+	toFile := filepath.Join(toDirBase, entryPathSuffix)
+	toDir := filepath.Dir(toFile)
+
+	if f, err := os.Stat(toDir); os.IsNotExist(err) || !f.IsDir() {
+		if err = os.MkdirAll(toDir, os.ModePerm); err != nil {
+			return err
+		}
+	}
+
+	return os.WriteFile(toFile+".bak", data, os.ModePerm)
 }
