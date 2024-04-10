@@ -6,17 +6,16 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/flickr"
 	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/url"
 )
 
 var (
-	rFlickrATag      = regexp.MustCompile(`<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+/in/[^"]+|gp/\w+/\w+)"[^>]*>`)
-	rFlickrScriptTag = regexp.MustCompile(`<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>`)
-	rEntryPathSuffix = regexp.MustCompile(`entry[/\\]\d{4}[/\\]\d{2}[/\\]\d{2}[/\\]\d{6}.md$`)
+	reEntryPathSuffix = regexp.MustCompile(`entry[/\\]\d{4}[/\\]\d{2}[/\\]\d{2}[/\\]\d{6}.md$`)
 )
 
 type Entry struct {
-	File, Body, BackupFile string
+	File, body, NewBody string
 }
 
 func NewEntry(file, backupDir string, dryrun bool) (Entry, error) {
@@ -25,36 +24,31 @@ func NewEntry(file, backupDir string, dryrun bool) (Entry, error) {
 		return Entry{}, err
 	}
 
-	backupFile := ""
-	if backupDir != "" && !dryrun {
-		backupFile, err = backup(file, backupDir, &textb)
-		if err != nil {
-			return Entry{}, err
-		}
-	}
-
 	return Entry{
-		File:       file,
-		Body:       string(textb),
-		BackupFile: backupFile,
+		File: file,
+		body: string(textb),
 	}, nil
 }
 
+func (entry *Entry) FindFlickrUrls() []string {
+	return flickr.ReUrl.FindAllString(entry.body, -1)
+}
+
 func (entry *Entry) Replace(replaceUrlPairs url.Urls) {
-	entry.Body = strings.NewReplacer(replaceUrlPairs.Flatten()...).Replace(
-		rFlickrScriptTag.ReplaceAllString(
-			rFlickrATag.ReplaceAllString(entry.Body, `<a tabindex="-1">`),
+	entry.NewBody = strings.NewReplacer(replaceUrlPairs.Flatten()...).Replace(
+		flickr.ReScriptTag.ReplaceAllString(
+			flickr.ReATag.ReplaceAllString(entry.body, `<a tabindex="-1">`),
 			"",
 		),
 	)
 }
 
 func (entry *Entry) Save() error {
-	return os.WriteFile(entry.File, []byte(entry.Body), os.ModePerm)
+	return os.WriteFile(entry.File, []byte(entry.NewBody), os.ModePerm)
 }
 
-func backup(fromFile, toDirBase string, data *[]byte) (string, error) {
-	entryPathSuffix := rEntryPathSuffix.FindString(fromFile)
+func (entry *Entry) Backup(fromFile, toDirBase string) (string, error) {
+	entryPathSuffix := reEntryPathSuffix.FindString(fromFile)
 	if entryPathSuffix == "" {
 		entryPathSuffix = filepath.Base(fromFile)
 	}
@@ -68,5 +62,5 @@ func backup(fromFile, toDirBase string, data *[]byte) (string, error) {
 	}
 
 	backupFile := toFile + ".bak"
-	return backupFile, os.WriteFile(backupFile, *data, os.ModePerm)
+	return backupFile, os.WriteFile(backupFile, []byte(entry.body), os.ModePerm)
 }

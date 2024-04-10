@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -17,11 +16,6 @@ import (
 	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/entry"
 	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/flickr"
 	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/url"
-)
-
-var (
-	// TODO: external file
-	rFlickrImageUrl = regexp.MustCompile(`https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)`)
 )
 
 var (
@@ -65,7 +59,7 @@ func main() {
 	}
 
 	// pick up flickr image urls
-	flickrImageUrls := rFlickrImageUrl.FindAllString(entry.Body, -1)
+	flickrImageUrls := entry.FindFlickrUrls()
 	if flickrImageUrls == nil {
 		log.Println("Flickr url is not in the entry")
 		return
@@ -101,15 +95,20 @@ func main() {
 	}
 
 	entry.Replace(replaceUrlPairs)
-	if dryrun {
-		fmt.Print(entry.Body)
-		return
-	}
-	entry.Save()
 
-	log.Println("Save: " + filepath.Clean(entryPath))
-	if entry.BackupFile == "" {
+	if dryrun {
+		fmt.Print(entry.NewBody)
 		return
 	}
-	log.Println("Backup: " + entry.BackupFile)
+
+	if backupDir != "" {
+		backupFile, err := entry.Backup(entryPath, backupDir)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println("Backup: " + backupFile)
+	}
+
+	entry.Save()
+	log.Println("Save: " + filepath.Clean(entryPath))
 }
