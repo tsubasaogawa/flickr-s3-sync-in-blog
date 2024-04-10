@@ -1,24 +1,21 @@
 package main
 
 import (
-	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 
-	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go/aws"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/entry"
+	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/flickr"
 	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/url"
 )
 
@@ -41,7 +38,7 @@ func init() {
 	flag.BoolVar(&uploadS3, "uploadS3", true, "Skip uploading to S3 when false")
 	flag.BoolVar(&dryrun, "dryrun", false, "Dry run")
 	flag.StringVar(&backupDir, "backupDir", "", "Backup directory for an entry file")
-	flag.IntVar(&threadLimit, "threadLimit", 4, "Limits for image download/upload threads")
+	flag.IntVar(&threadLimit, "threadLimit", 2, "Limits for image download/upload threads")
 }
 
 func main() {
@@ -70,19 +67,28 @@ func main() {
 	// pick up flickr image urls
 	flickrImageUrls := rFlickrImageUrl.FindAllString(entry.Body, -1)
 	if flickrImageUrls == nil {
-		log.Println("Flickr url is not in an entry")
-		os.Exit(0)
+		log.Println("Flickr url is not in the entry")
+		return
 	}
 
 	replaceUrlPairs := make(url.Urls, len(flickrImageUrls))
 	var eg errgroup.Group
 	eg.SetLimit(threadLimit)
 
+	// upload to S3 and replace flickr url
 	for i, url := range flickrImageUrls {
 		key := filepath.Join(dir, filepath.Base(url))
-		if !dryrun {
+		if !dryrun && uploadS3 {
 			eg.Go(func() error {
-				return copyFlickrImageToS3(s3Client, key, url)
+				if err = flickr.NewFlickr(url).CopyImageToS3(s3Client, bucket, key, overwrite); err != nil {
+					if errors.Is(err, os.ErrExist) {
+						log.Println("Avoid overwriting: " + key)
+						return nil
+					}
+					return err
+				}
+				log.Println("Upload: " + key)
+				return nil
 			})
 		}
 		// replace old flickr url to new s3 one
@@ -100,51 +106,10 @@ func main() {
 		return
 	}
 	entry.Save()
-}
 
-func copyFlickrImageToS3(s3c *s3.Client, key, url string) error {
-	if !uploadS3 {
-		return nil
+	log.Println("Save: " + filepath.Clean(entryPath))
+	if entry.BackupFile == "" {
+		return
 	}
-
-	imgb, err := getImageByteData(url)
-	if err != nil {
-		return err
-	}
-
-	list, err := s3c.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucket),
-		Prefix: aws.String(key),
-	})
-	if err != nil {
-		return err
-	} else if *list.KeyCount > 0 && !overwrite {
-		return nil
-	}
-
-	_, err = s3c.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket:        aws.String(bucket),
-		Key:           aws.String(key),
-		Body:          bytes.NewBuffer(imgb),
-		ContentLength: aws.Int64(int64(len(imgb))),
-	}, s3.WithAPIOptions(v4.SwapComputePayloadSHA256ForUnsignedPayloadMiddleware))
-
-	return err
-}
-
-func getImageByteData(url string) ([]byte, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return []byte{}, err
-	}
-	defer resp.Body.Close()
-
-	// To calculate image size, the program should read full data to memory
-	// because Flickr cannot return Content-Length header.
-	imgb, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return imgb, nil
+	log.Println("Backup: " + entry.BackupFile)
 }

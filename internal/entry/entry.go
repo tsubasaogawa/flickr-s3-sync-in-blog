@@ -16,7 +16,7 @@ var (
 )
 
 type Entry struct {
-	File, Body string
+	File, Body, BackupFile string
 }
 
 func NewEntry(file, backupDir string, dryrun bool) (Entry, error) {
@@ -25,15 +25,18 @@ func NewEntry(file, backupDir string, dryrun bool) (Entry, error) {
 		return Entry{}, err
 	}
 
+	backupFile := ""
 	if backupDir != "" && !dryrun {
-		if err := backup(file, backupDir, textb); err != nil {
+		backupFile, err = backup(file, backupDir, &textb)
+		if err != nil {
 			return Entry{}, err
 		}
 	}
 
 	return Entry{
-		File: file,
-		Body: string(textb),
+		File:       file,
+		Body:       string(textb),
+		BackupFile: backupFile,
 	}, nil
 }
 
@@ -50,8 +53,7 @@ func (entry *Entry) Save() error {
 	return os.WriteFile(entry.File, []byte(entry.Body), os.ModePerm)
 }
 
-// TODO: pointer argument `data`
-func backup(fromFile, toDirBase string, data []byte) error {
+func backup(fromFile, toDirBase string, data *[]byte) (string, error) {
 	entryPathSuffix := rEntryPathSuffix.FindString(fromFile)
 	if entryPathSuffix == "" {
 		entryPathSuffix = filepath.Base(fromFile)
@@ -61,9 +63,10 @@ func backup(fromFile, toDirBase string, data []byte) error {
 
 	if f, err := os.Stat(toDir); os.IsNotExist(err) || !f.IsDir() {
 		if err = os.MkdirAll(toDir, os.ModePerm); err != nil {
-			return err
+			return "", err
 		}
 	}
 
-	return os.WriteFile(toFile+".bak", data, os.ModePerm)
+	backupFile := toFile + ".bak"
+	return backupFile, os.WriteFile(backupFile, *data, os.ModePerm)
 }
