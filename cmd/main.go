@@ -73,8 +73,9 @@ func main() {
 	for i, url := range flickrImageUrls {
 		key := filepath.Join(dir, filepath.Base(url))
 		if !dryrun && uploadS3 {
+			u := url
 			eg.Go(func() error {
-				if err = flickr.NewFlickr(url).CopyImageToS3(s3Client, bucket, key, overwrite); err != nil {
+				if err = flickr.NewFlickr(u).CopyImageToS3(s3Client, bucket, key, overwrite); err != nil {
 					if errors.Is(err, os.ErrExist) {
 						log.Println("Avoid overwriting: " + key)
 						return nil
