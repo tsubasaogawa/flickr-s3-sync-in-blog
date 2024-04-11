@@ -1,9 +1,9 @@
 package url
 
 type Url struct {
-	Old string
-	New string
+	Old, New string
 }
+
 type Urls []Url
 
 func (urls *Urls) Flatten() []string {

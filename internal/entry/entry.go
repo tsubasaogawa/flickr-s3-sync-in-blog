@@ -15,7 +15,7 @@ var (
 )
 
 type Entry struct {
-	File, body, NewBody string
+	file, body, NewBody string
 }
 
 func NewEntry(file, backupDir string, dryrun bool) (Entry, error) {
@@ -25,7 +25,7 @@ func NewEntry(file, backupDir string, dryrun bool) (Entry, error) {
 	}
 
 	return Entry{
-		File: file,
+		file: file,
 		body: string(textb),
 	}, nil
 }
@@ -44,7 +44,7 @@ func (entry *Entry) Replace(replaceUrlPairs url.Urls) {
 }
 
 func (entry *Entry) Save() error {
-	return os.WriteFile(entry.File, []byte(entry.NewBody), os.ModePerm)
+	return os.WriteFile(entry.file, []byte(entry.NewBody), os.ModePerm)
 }
 
 func (entry *Entry) Backup(fromFile, toDirBase string) (string, error) {
