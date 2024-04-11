@@ -57,11 +57,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Load: " + entryPath)
 
 	// pick up flickr image urls
 	flickrImageUrls := entry.FindFlickrUrls()
 	if flickrImageUrls == nil {
-		log.Println("Flickr url is not in the entry")
+		log.Println("Entry has no Flickr url")
 		return
 	}
 
