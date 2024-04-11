@@ -35,14 +35,16 @@ func (flickr *Flickr) CopyImageToS3(s3c *s3.Client, bucket, key string, overwrit
 		return err
 	}
 
-	list, err := s3c.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucket),
-		Prefix: aws.String(key),
-	})
-	if err != nil {
-		return err
-	} else if *list.KeyCount > 0 && !overwrite {
-		return os.ErrExist
+	if !overwrite {
+		list, err := s3c.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+			Bucket: aws.String(bucket),
+			Prefix: aws.String(key),
+		})
+		if err != nil {
+			return err
+		} else if *list.KeyCount > 0 {
+			return os.ErrExist
+		}
 	}
 
 	_, err = s3c.PutObject(context.TODO(), &s3.PutObjectInput{
