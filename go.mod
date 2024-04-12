@@ -1,4 +1,4 @@
-module github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter
+module github.com/tsubasaogawa/flickr-s3-sync
 
 go 1.18
 

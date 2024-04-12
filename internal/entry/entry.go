@@ -6,11 +6,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/flickr"
-	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/url"
+	"github.com/tsubasaogawa/flickr-s3-sync/internal/flickr"
+	"github.com/tsubasaogawa/flickr-s3-sync/internal/url"
 )
 
 var (
+	// TODO: not only hatenablog
 	reEntryPathSuffix = regexp.MustCompile(`entry[/\\]\d{4,6}.*\.md$`)
 )
 

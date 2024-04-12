@@ -13,9 +13,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/entry"
-	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/flickr"
-	"github.com/tsubasaogawa/hatenablog-flickr-to-s3-converter/internal/url"
+	"github.com/tsubasaogawa/flickr-s3-sync/internal/entry"
+	"github.com/tsubasaogawa/flickr-s3-sync/internal/flickr"
+	"github.com/tsubasaogawa/flickr-s3-sync/internal/url"
 )
 
 var (
@@ -35,22 +35,27 @@ func init() {
 	flag.IntVar(&threadLimit, "threadLimit", 2, "Limits for image download/upload threads")
 }
 
-func main() {
-	flag.Parse()
+func validation(bucket, region, path string) {
 	if bucket == "" || region == "" {
 		log.Fatal("required args must be not empty")
 	}
+
+	if entryPath == "" {
+		log.Fatal("Arg is required")
+	}
+}
+
+func main() {
+	flag.Parse()
+
+	entryPath = flag.Arg(0)
+	validation(bucket, region, entryPath)
 
 	sdkConfig, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		log.Fatal("Couldn't load default configuration. Have you set up your AWS account?")
 	}
 	s3Client := s3.NewFromConfig(sdkConfig)
-
-	entryPath = flag.Arg(0)
-	if entryPath == "" {
-		log.Fatal("Arg is required")
-	}
 
 	// read entry text
 	entry, err := entry.NewEntry(entryPath, backupDir, dryrun)
@@ -66,30 +71,35 @@ func main() {
 		return
 	}
 
-	replaceUrlPairs := make(url.Urls, len(flickrImageUrls))
 	var eg errgroup.Group
 	eg.SetLimit(threadLimit)
+	replaceUrlPairs := make(url.Urls, len(flickrImageUrls))
 
-	// upload to S3 and replace flickr url
+	// handle as flickr url
 	for i, url := range flickrImageUrls {
 		key := filepath.Join(dir, filepath.Base(url))
-		if !dryrun && uploadS3 {
-			u := url
-			eg.Go(func() error {
-				if err = flickr.NewFlickr(u).CopyImageToS3(s3Client, bucket, key, overwrite); err != nil {
-					if errors.Is(err, os.ErrExist) {
-						log.Println("Avoid overwriting: " + key)
-						return nil
-					}
-					return err
-				}
-				log.Println("Upload: " + key)
-				return nil
-			})
-		}
-		// replace old flickr url to new s3 one
+
+		// save old flickr url to new s3 one
 		replaceUrlPairs[i].Old = url
 		replaceUrlPairs[i].New = "https://" + bucket + "/" + key
+
+		if dryrun || !uploadS3 {
+			continue
+		}
+
+		// upload using goroutine
+		u := url
+		eg.Go(func() error {
+			err = flickr.NewFlickr(u).CopyImageToS3(s3Client, bucket, key, overwrite)
+			if err == nil {
+				log.Println("Upload: " + key)
+				return nil
+			} else if errors.Is(err, os.ErrExist) {
+				log.Println("Avoid overwriting: " + key)
+				return nil
+			}
+			return err
+		})
 	}
 
 	if err := eg.Wait(); err != nil {
@@ -99,7 +109,7 @@ func main() {
 	entry.Replace(replaceUrlPairs)
 
 	if dryrun {
-		fmt.Print(entry.NewBody)
+		fmt.Println(entry.NewBody)
 		return
 	}
 
