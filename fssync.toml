@@ -1,0 +1,19 @@
+[general]
+backup_dir = "/var/tmp/fssync"
+thread_limit = 2
+
+[s3]
+bucket = "foo.bar.com"
+directory = "baz"
+region = "ap-northeast-1"
+overwrite = true
+
+[regex]
+entry_path.suffix = '''entry[/\\]\d{4,6}.*\.md$'''
+flickr.url = '''https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)'''
+flickr.tag.a = '''<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+[^"]+|gp/\w+/\w+)"[^>]*>'''
+flickr.tag.script = '''<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>'''
+
+[replace]
+flickr.tag.a = '''<a tabindex="-1">'''
+flickr.tag.script = ""
