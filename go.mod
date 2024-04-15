@@ -1,4 +1,4 @@
-module github.com/tsubasaogawa/flickr-s3-sync
+module github.com/tsubasaogawa/flickr-s3-sync-from-blog
 
 go 1.18
 

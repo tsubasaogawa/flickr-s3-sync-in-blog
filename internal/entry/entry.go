@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tsubasaogawa/flickr-s3-sync/internal/flickr"
-	"github.com/tsubasaogawa/flickr-s3-sync/internal/url"
+	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/flickr"
+	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/url"
 )
 
 var (
