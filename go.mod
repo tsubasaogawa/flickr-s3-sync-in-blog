@@ -1,6 +1,6 @@
 module github.com/tsubasaogawa/flickr-s3-sync-from-blog
 
-go 1.18
+go 1.21.3
 
 require (
 	github.com/BurntSushi/toml v1.3.2
