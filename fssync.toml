@@ -1,19 +1,30 @@
 [general]
+# Backup directory for blog file. If empty, fssync will not create the backup file.
 backup_dir = "/var/tmp/fssync"
+# The limit of thread for uploading images to S3
 thread_limit = 2
 
 [s3]
+# S3 bucket name
 bucket = "foo.bar.com"
+# S3 directory name (e.g., s3://foo.bar.com/baz/DSC001.jpg)
 directory = "baz"
 region = "ap-northeast-1"
+# If true, fssync uploads to S3 even if a file with the same name exists.
 overwrite = true
 
 [regex]
+# A path suffix for a blog entry file. It is used for the backup.
 entry_path.suffix = '''entry[/\\]\d{4,6}.*\.md$'''
+# An url representing an image uploaded to Flickr
 flickr.url = '''https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)'''
+# An anchor html tag for a Flickr image
 flickr.tag.a = '''<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+[^"]+|gp/\w+/\w+)"[^>]*>'''
+# A script html tag used by Flickr
 flickr.tag.script = '''<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>'''
 
 [replace]
+# A substituted string replaces `regex.flickr.tag.a`
 flickr.tag.a = '''<a tabindex="-1">'''
+# A substituted string replaces `regex.flickr.tag.script`
 flickr.tag.script = ""
