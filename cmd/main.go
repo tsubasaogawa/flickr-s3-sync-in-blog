@@ -31,15 +31,17 @@ func init() {
 	flag.BoolVar(&dryrun, "dryrun", false, "Dry run")
 }
 
-func setup() (string, *config.Config, *s3.Client) {
+func setup() (string, *config.Config, *s3.Client, error) {
 	flag.Parse()
 
 	entryPath := flag.Arg(0)
-	validation(entryPath)
+	if err := validation(entryPath); err != nil {
+		return "", nil, nil, err
+	}
 
 	conf, err := config.NewConfig(confPath)
 	if err != nil {
-		log.Fatal(err)
+		return "", nil, nil, err
 	}
 
 	sdkConfig, err := goConf.LoadDefaultConfig(context.TODO())
@@ -48,21 +50,26 @@ func setup() (string, *config.Config, *s3.Client) {
 	}
 	s3Client := s3.NewFromConfig(sdkConfig)
 
-	return entryPath, conf, s3Client
+	return entryPath, conf, s3Client, nil
 }
 
-func validation(entryPath string) {
+func validation(entryPath string) error {
 	if confPath == "" {
-		log.Fatal("Required args must be not empty")
+		return fmt.Errorf("confPath must be not empty")
 	}
 
 	if entryPath == "" {
-		log.Fatal("Arg is required")
+		return fmt.Errorf("Argument <entryPath> is required. For example: /foo/bar/blog/posts.md")
 	}
+
+	return nil
 }
 
 func main() {
-	entryPath, conf, s3c := setup()
+	entryPath, conf, s3c, err := setup()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// read entry text
 	entry, err := entry.NewEntry(entryPath, conf.General.BackupDir, dryrun)
