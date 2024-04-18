@@ -37,10 +37,7 @@ func NewEntry(file string, conf *config.Config) (Entry, error) {
 
 func (entry *Entry) Replace(replaceUrlPairs url.Urls) {
 	entry.NewBody = strings.NewReplacer(replaceUrlPairs.Flatten()...).Replace(
-		flickr.ReScriptTag.ReplaceAllString(
-			flickr.ReATag.ReplaceAllString(entry.Body, entry.config.Replace.Flickr.Tag["a"]),
-			entry.config.Replace.Flickr.Tag["script"],
-		),
+		flickr.RemoveNeedlessHtml(entry.Body, entry.config),
 	)
 }
 

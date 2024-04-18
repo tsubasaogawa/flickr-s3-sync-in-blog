@@ -82,3 +82,13 @@ func (flickr *Flickr) getImageByteData() (*[]byte, error) {
 func FindUrls(body string, conf *config.Config) []string {
 	return regexp.MustCompile(conf.Regex.Flickr.Url).FindAllString(body, -1)
 }
+
+func RemoveNeedlessHtml(body string, conf *config.Config) string {
+	return regexp.MustCompile(conf.Regex.Flickr.Tag["a"]).ReplaceAllString(
+		regexp.MustCompile(conf.Regex.Flickr.Tag["script"]).ReplaceAllString(
+			body,
+			conf.Replace.Flickr.Tag["a"],
+		),
+		conf.Replace.Flickr.Tag["script"],
+	)
+}
