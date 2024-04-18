@@ -11,21 +11,25 @@ import (
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/config"
 )
 
 type Flickr struct {
-	Url string
+	Url    string
+	config *config.Config
 }
 
 var (
-	ReUrl       = regexp.MustCompile(`https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)`)
-	ReATag      = regexp.MustCompile(`<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+[^"]+|gp/\w+/\w+)"[^>]*>`)
-	ReScriptTag = regexp.MustCompile(`<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>`)
+	ReATag, ReScriptTag *regexp.Regexp
 )
 
-func NewFlickr(url string) *Flickr {
+func NewFlickr(url string, conf *config.Config) *Flickr {
+	ReATag = regexp.MustCompile(conf.Regex.Flickr.Tag["a"])
+	ReScriptTag = regexp.MustCompile(conf.Regex.Flickr.Tag["script"])
+
 	return &Flickr{
-		Url: url,
+		Url:    url,
+		config: conf,
 	}
 }
 
@@ -73,4 +77,8 @@ func (flickr *Flickr) getImageByteData() (*[]byte, error) {
 	}
 
 	return &imgb, nil
+}
+
+func FindUrls(body string, conf *config.Config) []string {
+	return regexp.MustCompile(conf.Regex.Flickr.Url).FindAllString(body, -1)
 }

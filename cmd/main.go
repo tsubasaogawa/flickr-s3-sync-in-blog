@@ -72,14 +72,14 @@ func main() {
 	}
 
 	// read entry text
-	entry, err := entry.NewEntry(entryPath, conf.General.BackupDir, dryrun)
+	entry, err := entry.NewEntry(entryPath, conf)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println("Load: " + entryPath)
 
 	// pick up flickr image urls
-	flickrImageUrls := entry.FindFlickrUrls()
+	flickrImageUrls := flickr.FindUrls(entry.Body, conf)
 	if flickrImageUrls == nil {
 		log.Println("Entry has no Flickr url")
 		return
@@ -104,7 +104,7 @@ func main() {
 		// upload using goroutine
 		u := url
 		eg.Go(func() error {
-			err = flickr.NewFlickr(u).CopyImageToS3(s3c, conf.S3.Bucket, key, conf.S3.Overwrite)
+			err = flickr.NewFlickr(u, conf).CopyImageToS3(s3c, conf.S3.Bucket, key, conf.S3.Overwrite)
 			if err == nil {
 				log.Println("Upload: " + key)
 				return nil

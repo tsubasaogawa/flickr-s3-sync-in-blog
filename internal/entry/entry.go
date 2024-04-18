@@ -6,40 +6,40 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/config"
 	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/flickr"
 	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/url"
 )
 
 var (
-	// TODO: not only hatenablog
-	reEntryPathSuffix = regexp.MustCompile(`entry[/\\]\d{4,6}.*\.md$`)
+	reEntryPathSuffix *regexp.Regexp
 )
 
 type Entry struct {
-	file, body, NewBody string
+	file, Body, NewBody string
+	config              *config.Config
 }
 
-func NewEntry(file, backupDir string, dryrun bool) (Entry, error) {
+func NewEntry(file string, conf *config.Config) (Entry, error) {
 	textb, err := os.ReadFile(file)
 	if err != nil {
 		return Entry{}, err
 	}
 
-	return Entry{
-		file: file,
-		body: string(textb),
-	}, nil
-}
+	reEntryPathSuffix = regexp.MustCompile(conf.Regex.EntryPath["suffix"])
 
-func (entry *Entry) FindFlickrUrls() []string {
-	return flickr.ReUrl.FindAllString(entry.body, -1)
+	return Entry{
+		file:   file,
+		Body:   string(textb),
+		config: conf,
+	}, nil
 }
 
 func (entry *Entry) Replace(replaceUrlPairs url.Urls) {
 	entry.NewBody = strings.NewReplacer(replaceUrlPairs.Flatten()...).Replace(
 		flickr.ReScriptTag.ReplaceAllString(
-			flickr.ReATag.ReplaceAllString(entry.body, `<a tabindex="-1">`),
-			"",
+			flickr.ReATag.ReplaceAllString(entry.Body, entry.config.Replace.Flickr.Tag["a"]),
+			entry.config.Replace.Flickr.Tag["script"],
 		),
 	)
 }
@@ -63,5 +63,5 @@ func (entry *Entry) Backup(fromFile, toDirBase string) (string, error) {
 	}
 
 	backupFile := toFile + ".bak"
-	return backupFile, os.WriteFile(backupFile, []byte(entry.body), os.ModePerm)
+	return backupFile, os.WriteFile(backupFile, []byte(entry.Body), os.ModePerm)
 }
