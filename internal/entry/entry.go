@@ -11,10 +11,6 @@ import (
 	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/url"
 )
 
-var (
-	reEntryPathSuffix *regexp.Regexp
-)
-
 type Entry struct {
 	file, Body, NewBody string
 	config              *config.Config
@@ -26,8 +22,6 @@ func NewEntry(file string, conf *config.Config) (Entry, error) {
 		return Entry{}, err
 	}
 
-	reEntryPathSuffix = regexp.MustCompile(conf.Regex.EntryPath["suffix"])
-
 	return Entry{
 		file:   file,
 		Body:   string(textb),
@@ -37,7 +31,7 @@ func NewEntry(file string, conf *config.Config) (Entry, error) {
 
 func (entry *Entry) Replace(replaceUrlPairs url.Urls) {
 	entry.NewBody = strings.NewReplacer(replaceUrlPairs.Flatten()...).Replace(
-		flickr.RemoveNeedlessHtml(entry.Body, entry.config),
+		flickr.ReplaceNeedlessTags(entry.Body, entry.config),
 	)
 }
 
@@ -46,7 +40,7 @@ func (entry *Entry) Save() error {
 }
 
 func (entry *Entry) Backup(fromFile, toDirBase string) (string, error) {
-	entryPathSuffix := reEntryPathSuffix.FindString(fromFile)
+	entryPathSuffix := regexp.MustCompile(entry.config.Regex.EntryPath["suffix"]).FindString(fromFile)
 	if entryPathSuffix == "" {
 		entryPathSuffix = filepath.Base(fromFile)
 	}

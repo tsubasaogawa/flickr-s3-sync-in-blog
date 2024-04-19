@@ -19,12 +19,12 @@ entry_path.suffix = '''entry[/\\]\d{4,6}.*\.md$'''
 # An url representing an image uploaded to Flickr
 flickr.url = '''https?://\w+\.staticflickr\.com/[0-9a-zA-Z_/]+\.(?:jpg|jpeg|png|gif)'''
 # An anchor html tag for a Flickr image
-flickr.tag.a = '''<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+[^"]+|gp/\w+/\w+)"[^>]*>'''
+flickr.tag.a_start = '''<a.*href="https?://www\.flickr\.com/(?:photos/\w+/\d+[^"]+|gp/\w+/\w+)"[^>]*>'''
 # A script html tag used by Flickr
 flickr.tag.script = '''<script.*src="//embedr.flickr.com/assets/client-code.js"[^>]*></script>'''
 
 [replace]
 # A substituted string replaces `regex.flickr.tag.a`
-flickr.tag.a = '''<a tabindex="-1">'''
+flickr.tag.a_start = '''<a tabindex="-1">'''
 # A substituted string replaces `regex.flickr.tag.script`
 flickr.tag.script = ""

@@ -25,7 +25,6 @@ var (
 )
 
 func init() {
-	// TODO: implement test mode
 	flag.StringVar(&confPath, "config", "", "Configuration toml file path")
 	flag.BoolVar(&uploadS3, "uploadS3", true, "Skip uploading to S3 when false")
 	flag.BoolVar(&dryrun, "dryrun", false, "Dry run")
