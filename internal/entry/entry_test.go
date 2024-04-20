@@ -2,6 +2,8 @@ package entry_test
 
 import (
 	"os"
+	"path/filepath"
+	"regexp"
 	"runtime"
 	"testing"
 
@@ -45,5 +47,39 @@ func TestReplace(t *testing.T) {
 }
 
 func TestBackup(t *testing.T) {
-	t.Skipf("TODO\n")
+	tmpdir, err := os.MkdirTemp(os.TempDir(), "entries")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	f, err := os.CreateTemp(tmpdir, "entry")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileSuffixPtn := filepath.Join(`entries.+`, `entry.+`) + `$`
+	reFileSuffix := regexp.MustCompile(fileSuffixPtn)
+	fileSuffix := reFileSuffix.FindString(f.Name())
+	if fileSuffix == "" {
+		t.Errorf("Cannot match a temp file name with the suffix pattern")
+	}
+	want := filepath.Join(os.TempDir(), fileSuffix) + ".bak"
+
+	c := config.Config{}
+	c.Regex.EntryPath = map[string]string{}
+	c.Regex.EntryPath["suffix"] = fileSuffixPtn
+
+	e, err := entry.NewEntry(f.Name(), &c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := e.Backup(f.Name(), os.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got != want {
+		t.Errorf("got: %#v, want: %#v\n", got, want)
+	}
 }
