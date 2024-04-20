@@ -42,7 +42,7 @@ func (entry *Entry) Save() error {
 func (entry *Entry) Backup(fromFile, toDirPrefix string) (string, error) {
 	toFile := entry.generateBackupFilePath(fromFile, toDirPrefix)
 
-	if err := entry.createBackupDir(filepath.Dir(toFile)); err != nil {
+	if err := createBackupDir(filepath.Dir(toFile)); err != nil {
 		return "", err
 	}
 
@@ -58,7 +58,7 @@ func (entry *Entry) generateBackupFilePath(fromFile, toDirPrefix string) string 
 	return filepath.Join(toDirPrefix, entryPathSuffix)
 }
 
-func (entry *Entry) createBackupDir(toDir string) error {
+func createBackupDir(toDir string) error {
 	if f, err := os.Stat(toDir); os.IsNotExist(err) || !f.IsDir() {
 		if err = os.MkdirAll(toDir, os.ModePerm); err != nil {
 			return err
