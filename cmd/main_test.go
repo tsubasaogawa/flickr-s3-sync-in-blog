@@ -11,7 +11,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestSetup(t *testing.T) {
+func TestSetupUsingArg(t *testing.T) {
 	tests := map[string]struct {
 		entryPath, confPath, uploadS3, dryrun string
 		hasErr                                bool
@@ -21,13 +21,11 @@ func TestSetup(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			// TODO: test with entryPath
 			flag.CommandLine.Set("config", tt.confPath)
 			flag.CommandLine.Set("uploadS3", tt.uploadS3)
 			flag.CommandLine.Set("dryrun", tt.dryrun)
 
-			if _, _, _, err := setup(); tt.hasErr == (err == nil) {
-				t.Skipf("Skip until entryPath test will be implemented.")
+			if _, _, _, err := setupUsingArg(tt.entryPath); tt.hasErr == (err == nil) {
 				t.Errorf("got: %#v, want: %#v\n", err != nil, tt.hasErr)
 			}
 		})

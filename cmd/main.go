@@ -34,6 +34,10 @@ func setup() (string, *config.Config, *s3.Client, error) {
 	flag.Parse()
 
 	entryPath := flag.Arg(0)
+	return setupUsingArg(entryPath)
+}
+
+func setupUsingArg(entryPath string) (string, *config.Config, *s3.Client, error) {
 	if err := validation(entryPath); err != nil {
 		return "", nil, nil, err
 	}
