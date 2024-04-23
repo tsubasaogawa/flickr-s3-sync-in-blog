@@ -3,6 +3,8 @@
 backup_dir = "/var/tmp/fssync"
 # The limit of thread for uploading images to S3
 thread_limit = 2
+# It is a number that will take care of Flickr.
+sleep_sec_for_flickr = 1
 
 [s3]
 # S3 bucket name

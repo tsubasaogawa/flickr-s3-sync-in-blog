@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	goConf "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -20,6 +21,7 @@ import (
 )
 
 var (
+	version          string = "v0.0.0"
 	confPath         string
 	uploadS3, dryrun bool
 )
@@ -108,6 +110,7 @@ func main() {
 		u := url
 		eg.Go(func() error {
 			err = flickr.NewFlickr(u, conf).CopyImageToS3(s3c, conf.S3.Bucket, key, conf.S3.Overwrite)
+			time.Sleep(conf.General.SleepSecForFlickr * time.Second)
 			if err == nil {
 				log.Println("Upload: " + key)
 				return nil
