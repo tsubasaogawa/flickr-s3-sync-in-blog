@@ -8,7 +8,7 @@ before:
     - go mod tidy
 
 builds:
-  - main: .
+  - main: cmd/
     binary: fssync
     ldflags:
       - -s -w
