@@ -58,7 +58,7 @@ func setupUsingArg(entryPath string) (string, *config.Config, *s3.Client, error)
 
 func validation(entryPath string) error {
 	if confPath == "" {
-		return fmt.Errorf("confPath must be not empty")
+		return fmt.Errorf("confPath (fssync.toml) must be not empty")
 	}
 
 	if entryPath == "" {
