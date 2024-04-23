@@ -18,7 +18,9 @@ jobs:
         with:
           go-version: 1.21.3
       - name: Test
-        run: go test -v .
+        run: |
+          go test -v cmd/*.go
+          find internal/ -name *_test.go -type f -print0 | xargs -0 -n1 go test -v
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
