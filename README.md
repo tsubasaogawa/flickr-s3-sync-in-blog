@@ -1,6 +1,6 @@
-# flickr-s3-sync-from-blog (fssync)
+# flickr-s3-sync-in-blog (fssync)
 
-flickr-s3-sync-from-blog helps you migrate from Flickr.
+flickr-s3-sync-in-blog helps you migrate from Flickr.
 
 ## Features
 
@@ -34,7 +34,7 @@ aws s3 ls s3://your.s3bucket.com/56789_123abc456def_c.jpg
 
 ## Install
 
-Download the binary from the [release](https://github.com/tsubasaogawa/flickr-s3-sync-from-blog/releases) page.
+Download the binary from the [release](https://github.com/tsubasaogawa/flickr-s3-sync-in-blog/releases) page.
 
 ## Configuration
 

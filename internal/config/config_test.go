@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/config"
+	"github.com/tsubasaogawa/flickr-s3-sync-in-blog/internal/config"
 )
 
 func TestMain(m *testing.M) {

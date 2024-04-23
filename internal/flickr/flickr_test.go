@@ -5,8 +5,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/config"
-	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/flickr"
+	"github.com/tsubasaogawa/flickr-s3-sync-in-blog/internal/config"
+	"github.com/tsubasaogawa/flickr-s3-sync-in-blog/internal/flickr"
 )
 
 func TestMain(m *testing.M) {

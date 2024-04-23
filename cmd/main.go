@@ -13,10 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/config"
-	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/entry"
-	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/flickr"
-	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/url"
+	"github.com/tsubasaogawa/flickr-s3-sync-in-blog/internal/config"
+	"github.com/tsubasaogawa/flickr-s3-sync-in-blog/internal/entry"
+	"github.com/tsubasaogawa/flickr-s3-sync-in-blog/internal/flickr"
+	"github.com/tsubasaogawa/flickr-s3-sync-in-blog/internal/url"
 )
 
 var (

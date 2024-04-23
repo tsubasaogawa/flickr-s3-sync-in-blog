@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/config"
-	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/entry"
+	"github.com/tsubasaogawa/flickr-s3-sync-in-blog/internal/config"
+	"github.com/tsubasaogawa/flickr-s3-sync-in-blog/internal/entry"
 )
 
 var (

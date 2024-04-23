@@ -11,7 +11,7 @@ import (
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/tsubasaogawa/flickr-s3-sync-from-blog/internal/config"
+	"github.com/tsubasaogawa/flickr-s3-sync-in-blog/internal/config"
 )
 
 type Flickr struct {
