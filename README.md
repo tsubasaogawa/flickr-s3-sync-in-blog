@@ -1,11 +1,11 @@
 # flickr-s3-sync-from-blog (fssync)
 
-flickr-s3-sync-from-blog is an image transfer in the blog post from Flickr to Amazon S3.
+flickr-s3-sync-from-blog helps you migrate from Flickr.
 
 ## Features
 
-- Copy images from Flickr to S3 based in the blog post
-- Replace Flickr URLs with S3 URLs in the post
+- Copy images in the blog post from Flickr to S3
+- Replace Flickr URLs with S3 URLs in the blog post
 - Remove some tags and attributes used by Flickr, such as `data-flickr-embed`, `client-code.js`
 
 For example:
@@ -23,8 +23,13 @@ After
 
 ```html
 <a tabindex="-1">
-    <img src="https://photo.ogatube.com/blog/56789_123abc456def_c.jpg" alt="twilight" width="530" height="800" />
+    <img src="https://your.s3bucket.com/56789_123abc456def_c.jpg" alt="twilight" width="530" height="800" />
 </a>
+```
+
+```bash
+aws s3 ls s3://your.s3bucket.com/56789_123abc456def_c.jpg
+# -> File exists
 ```
 
 ## Install
@@ -41,13 +46,25 @@ Open and edit `fssync.toml`.
 ./fssync -config=fssync.toml -dryrun=true <PATH TO BLOG FILE>
 ```
 
-fssync will not upload an image or overwrite a file. It outputs the replaced blog text to stdout.
+`fssync` with dryrun mode will not upload an image or modify a blog file. It outputs replaced blog texts to stdout.
 
-After your check, you can run it with no dryrun option.
+After your check, you can run it without dryrun option.
+
+```bash
+./fssync -config=fssync.toml <PATH TO BLOG FILE>
+```
 
 ## Tips
 
-### Use fssync for hatenablog using [blogsync](https://github.com/x-motemen/blogsync)
+### Run fssync to multiple blog posts
+
+`find` is useful.
+
+```bash
+find <PATH TO BLOG DIR> -name '**/*.md' -type f -print0 | xargs -0 -n1 ./fssync -config=fssync.toml
+```
+
+### For hatenablog using [blogsync](https://github.com/x-motemen/blogsync)
 
 ```bash
 # Pull all blog posts
