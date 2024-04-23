@@ -50,7 +50,7 @@ func TestFindUrls(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			c := config.Config{}
-			c.Regex.Flickr.Url = tt.regex
+			c.Regex.Flickr.ImageUrl = tt.regex
 			got := flickr.FindUrls(body, &c)
 			if !slices.Equal(got, tt.want) {
 				t.Errorf("got: %#v, want: %#v\n", got, tt.want)

@@ -31,8 +31,8 @@ type (
 	regex struct {
 		EntryPath map[string]string `toml:"entry_path"`
 		Flickr    struct {
-			Url string
-			Tag map[string]string
+			ImageUrl string `toml:"image_url"`
+			Tag      map[string]string
 		}
 	}
 
@@ -59,7 +59,7 @@ func NewConfig(f string) (*Config, error) {
 }
 
 func (c *Config) hasInvalidValue() bool {
-	if c.S3.Bucket == "" || c.S3.Region == "" || c.Regex.Flickr.Url == "" {
+	if c.S3.Bucket == "" || c.S3.Region == "" || c.Regex.Flickr.ImageUrl == "" {
 		return true
 	}
 

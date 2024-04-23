@@ -73,7 +73,7 @@ func (flickr *Flickr) getImageByteData() (*[]byte, error) {
 }
 
 func FindUrls(body string, conf *config.Config) []string {
-	return regexp.MustCompile(conf.Regex.Flickr.Url).FindAllString(body, -1)
+	return regexp.MustCompile(conf.Regex.Flickr.ImageUrl).FindAllString(body, -1)
 }
 
 func ReplaceNeedlessTags(body string, conf *config.Config) string {
